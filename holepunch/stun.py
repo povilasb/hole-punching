@@ -1,3 +1,5 @@
+"""STUN client side implementation."""
+
 import binascii
 import logging
 import random

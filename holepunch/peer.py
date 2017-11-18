@@ -1,41 +1,51 @@
-import socket
+import socket as blocking_socket
 from threading import Thread
 from typing import Tuple
 
+import curio
+from curio import socket
+
 import stun
+
+
+async def start_peer(bind_port: int) -> None:
+    client_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    client_sock.bind(('0.0.0.0', bind_port))
+    recv_task = await curio.spawn(recv_data, client_sock)
+
+    queue = curio.UniversalQueue()
+    stdin_thread = Thread(target=read_peer_info, args=(queue,))
+    stdin_thread.start()
+
+    peer_ip, peer_port = await queue.get()
+    print(f'Connecting to: {peer_ip}:{peer_port}')
+
+    await client_sock.sendto(b'hey there!', (peer_ip, peer_port))
+
+    stdin_thread.join()
+    await recv_task.join()
+
+
+def read_peer_info(queue: curio.UniversalQueue) -> None:
+    line = input('Enter peer connection info: ')
+    queue.put(parse_conn_info(line))
+
+
+async def recv_data(sock: socket.socket) -> None:
+    while True:
+        data, addr = await sock.recvfrom(4096)
+        print('Received: ', data, addr)
 
 
 def main() -> None:
     my_ip, my_port = whats_my_external_ip()
     print('Public connection info:', my_ip, my_port)
-
-    #listener_thread = Thread(target=start_listener)
-    #listener_thread.start()
-    #print('Listener started')
-
-    line = input('Enter peer connection info: ')
-    peer_ip, peer_port = parse_conn_info(line)
-    print(f'Connecting to: {peer_ip}:{peer_port}')
-
-
-    client_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    client_sock.bind(('0.0.0.0', my_port))
-    client_sock.sendto(b'hey there!', (peer_ip, peer_port))
-    data, addr = client_sock.recvfrom(4096)
-    print('Received: ', data, addr)
-    client_sock.close()
+    curio.run(start_peer, my_port)
 
 
 def parse_conn_info(ln: str) -> Tuple[str, int]:
     parts = ln.strip().split()
     return (parts[0], int(parts[1]))
-
-
-def start_listener() -> None:
-    server_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    server_sock.bind(('0.0.0.0', 0))
-    data, addr = server_sock.recvfrom(4096)
-    server_sock.close()
 
 
 def whats_my_external_ip() -> Tuple[str, int]:
@@ -57,7 +67,8 @@ def resolve_hostname(hostname: str, port: int=None) -> str:
         IP address used to connect to the specified hostname.
     """
     try:
-        res = socket.getaddrinfo(hostname, port, socket.AF_INET)
+        res = blocking_socket.getaddrinfo(
+            hostname, port, blocking_socket.AF_INET)
         if len(res) == 0:
             return None
 
@@ -69,4 +80,5 @@ def resolve_hostname(hostname: str, port: int=None) -> str:
         return None
 
 
-main()
+if __name__ == '__main__':
+    main()
