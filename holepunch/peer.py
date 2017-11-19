@@ -37,7 +37,7 @@ async def recv_data(sock: socket.socket) -> None:
 
 
 def main() -> None:
-    my_ip, my_port = curio.run(whats_my_external_ip)
+    my_ip, my_port = curio.run(whats_my_external_ip, 'tcp')
     print('Public connection info:', my_ip, my_port)
     curio.run(start_peer, my_port)
 
@@ -47,11 +47,16 @@ def parse_conn_info(ln: str) -> Tuple[str, int]:
     return (parts[0], int(parts[1]))
 
 
-async def whats_my_external_ip() -> Tuple[str, int]:
-    stun_port = 19302
-    stun_ip = await resolve_hostname('stun.l.google.com', stun_port)
-    _, ip, port = await stun.get_ip_info(stun_host=stun_ip, stun_port=stun_port)
-    return (ip, port)
+async def whats_my_external_ip(protocol: str='udp') -> Tuple[str, int]:
+    if protocol == 'udp':
+        stun_port = 19302
+        stun_ip = await resolve_hostname('stun.l.google.com', stun_port)
+        _, ip, port = await stun.get_ip_info(stun_host=stun_ip, stun_port=stun_port)
+        return (ip, port)
+    elif protocol == 'tcp':
+        return await stun.get_ip_for_tcp('35.202.168.244', 80)
+    else:
+        raise Exception('Unsupported protocol')
 
 
 async def resolve_hostname(hostname: str, port: int=None) -> str:

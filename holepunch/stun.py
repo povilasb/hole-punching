@@ -263,3 +263,14 @@ async def get_ip_info(source_ip="0.0.0.0", source_port=54320, stun_host=None,
         external_port = nat['ExternalPort']
         await s.close()
         return (nat_type, external_ip, external_port)
+
+
+async def get_ip_for_tcp(stun_host: str, stun_port: int) -> Tuple[str, int]:
+    sock = socket.socket()
+    sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+
+    await sock.connect((stun_host, stun_port))
+    resp = await sock.recv(4096)
+    parts = resp.decode('ascii').split()
+
+    return parts[0], int(parts[1])
