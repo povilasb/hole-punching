@@ -1,4 +1,3 @@
-import socket as blocking_socket
 from threading import Thread
 from typing import Tuple
 
@@ -50,12 +49,12 @@ def parse_conn_info(ln: str) -> Tuple[str, int]:
 
 async def whats_my_external_ip() -> Tuple[str, int]:
     stun_port = 19302
-    stun_ip = resolve_hostname('stun.l.google.com', stun_port)
+    stun_ip = await resolve_hostname('stun.l.google.com', stun_port)
     _, ip, port = await stun.get_ip_info(stun_host=stun_ip, stun_port=stun_port)
     return (ip, port)
 
 
-def resolve_hostname(hostname: str, port: int=None) -> str:
+async def resolve_hostname(hostname: str, port: int=None) -> str:
     """DNS resolve hostname.
 
     Args:
@@ -67,8 +66,7 @@ def resolve_hostname(hostname: str, port: int=None) -> str:
         IP address used to connect to the specified hostname.
     """
     try:
-        res = blocking_socket.getaddrinfo(
-            hostname, port, blocking_socket.AF_INET)
+        res = await socket.getaddrinfo(hostname, port, socket.AF_INET)
         if len(res) == 0:
             return None
 
