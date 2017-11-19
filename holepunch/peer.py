@@ -38,7 +38,7 @@ async def recv_data(sock: socket.socket) -> None:
 
 
 def main() -> None:
-    my_ip, my_port = whats_my_external_ip()
+    my_ip, my_port = curio.run(whats_my_external_ip)
     print('Public connection info:', my_ip, my_port)
     curio.run(start_peer, my_port)
 
@@ -48,10 +48,10 @@ def parse_conn_info(ln: str) -> Tuple[str, int]:
     return (parts[0], int(parts[1]))
 
 
-def whats_my_external_ip() -> Tuple[str, int]:
+async def whats_my_external_ip() -> Tuple[str, int]:
     stun_port = 19302
     stun_ip = resolve_hostname('stun.l.google.com', stun_port)
-    _, ip, port = stun.get_ip_info(stun_host=stun_ip, stun_port=stun_port)
+    _, ip, port = await stun.get_ip_info(stun_host=stun_ip, stun_port=stun_port)
     return (ip, port)
 
 
