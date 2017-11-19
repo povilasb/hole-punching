@@ -4,7 +4,7 @@ from typing import Tuple
 import curio
 from curio import socket
 
-import stun
+from . import stun
 
 
 async def start_peer(bind_port: int) -> None:
