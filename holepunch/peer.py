@@ -3,6 +3,7 @@ from typing import Tuple
 
 import curio
 from curio import socket
+import click
 
 from . import stun
 
@@ -36,8 +37,11 @@ async def recv_data(sock: socket.socket) -> None:
         print('Received: ', data, addr)
 
 
-def main() -> None:
-    my_ip, my_port = curio.run(whats_my_external_ip, 'tcp')
+@click.command()
+@click.option('--protocol', '--proto', 'protocol', default='udp', type=str,
+              help='Use either TCP or UDP to communicate with STUN server.',)
+def main(protocol: str) -> None:
+    my_ip, my_port = curio.run(whats_my_external_ip, protocol)
     print('Public connection info:', my_ip, my_port)
     curio.run(start_peer, my_port)
 
